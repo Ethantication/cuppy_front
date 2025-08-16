@@ -7,10 +7,12 @@ struct ContentView: View {
         ZStack {
             if appState.isFirstLaunch {
                 CommunitySelectionView()
-            } else if let community = appState.selectedCommunity {
+                    .environmentObject(appState)
+            } else if let _ = appState.selectedCommunity {
                 MainTabView()
                     .sheet(isPresented: $appState.showRegistrationPopup) {
                         RegistrationView()
+                            .environmentObject(appState)
                     }
             }
         }
