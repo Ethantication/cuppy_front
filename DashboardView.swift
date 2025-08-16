@@ -2,12 +2,13 @@ import SwiftUI
 
 struct DashboardView: View {
     @EnvironmentObject var appState: AppState
-    @EnvironmentObject var dataStore: DataStore
+    @StateObject private var supabaseService = SupabaseService.shared
     @State private var showingCoffeeShopDetail = false
     @State private var selectedCoffeeShop: CoffeeShop?
+    @State private var coffeeShops: [CoffeeShop] = []
     
     var coffeeShopsInCommunity: [CoffeeShop] {
-        dataStore.coffeeShops.filter { $0.communityId == appState.selectedCommunity?.id }
+        coffeeShops.filter { $0.communityId == appState.selectedCommunity?.id }
     }
     
     var body: some View {
@@ -37,6 +38,25 @@ struct DashboardView: View {
                     .padding(.horizontal, 20)
                     .padding(.top, 10)
                     
+                    // Loading indicator
+                    if supabaseService.isLoading {
+                        HStack {
+                            ProgressView()
+                                .scaleEffect(0.8)
+                            Text("Loading coffee shops...")
+                                .foregroundColor(.secondary)
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding()
+                    }
+                    
+                    // Error display
+                    if let error = supabaseService.error {
+                        Text("Error: \(error)")
+                            .foregroundColor(.red)
+                            .padding()
+                    }
+                    
                     // Coffee Shops
                     ForEach(coffeeShopsInCommunity) { coffeeShop in
                         CoffeeShopCard(coffeeShop: coffeeShop) {
@@ -50,13 +70,28 @@ struct DashboardView: View {
             }
             .navigationBarTitleDisplayMode(.inline)
             .refreshable {
-                // Simulate refresh
+                await loadCoffeeShops()
+            }
+            .onAppear {
+                Task {
+                    await loadCoffeeShops()
+                }
             }
         }
         .sheet(isPresented: $showingCoffeeShopDetail) {
             if let coffeeShop = selectedCoffeeShop {
                 CoffeeShopDetailView(coffeeShop: coffeeShop)
             }
+        }
+    }
+    
+    // MARK: - Data Loading
+    private func loadCoffeeShops() async {
+        guard let communityId = appState.selectedCommunity?.id else { return }
+        
+        let shops = await supabaseService.fetchCoffeeShops(for: communityId)
+        await MainActor.run {
+            self.coffeeShops = shops
         }
     }
 }
@@ -189,5 +224,4 @@ struct CoffeeShopCard: View {
 #Preview {
     DashboardView()
         .environmentObject(AppState())
-        .environmentObject(DataStore.shared)
 }

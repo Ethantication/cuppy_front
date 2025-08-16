@@ -2,7 +2,6 @@ import SwiftUI
 
 struct ContentView: View {
     @EnvironmentObject var appState: AppState
-    @StateObject private var dataStore = DataStore.shared
     
     var body: some View {
         ZStack {
@@ -15,6 +14,5 @@ struct ContentView: View {
                     }
             }
         }
-        .environmentObject(dataStore)
     }
 }

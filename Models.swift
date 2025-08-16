@@ -18,6 +18,7 @@ struct User: Codable, Identifiable {
     let points: Int
     let friends: [String] // Friend IDs
     let joinDate: Date
+    let authUserId: String? // For Supabase Auth integration
 }
 
 // MARK: - Coffee Shop

@@ -2,11 +2,12 @@ import SwiftUI
 
 struct TransferPointsView: View {
     @EnvironmentObject var appState: AppState
-    @EnvironmentObject var dataStore: DataStore
+    @StateObject private var supabaseService = SupabaseService.shared
     @Environment(\.dismiss) private var dismiss
     @State private var selectedFriend: User?
     @State private var pointsToSend = ""
     @State private var showingSuccess = false
+    @State private var friends: [User] = []
     
     var userPoints: Int {
         appState.currentUser?.points ?? 0
@@ -50,12 +51,22 @@ struct TransferPointsView: View {
                                 .fontWeight(.semibold)
                             
                             LazyVStack(spacing: 10) {
-                                ForEach(dataStore.sampleUsers.filter { $0.id != appState.currentUser?.id }) { friend in
-                                    FriendCard(
-                                        friend: friend,
-                                        isSelected: selectedFriend?.id == friend.id
-                                    ) {
-                                        selectedFriend = friend
+                                if supabaseService.isLoading {
+                                    ProgressView("Loading friends...")
+                                        .frame(maxWidth: .infinity)
+                                        .padding()
+                                } else if friends.isEmpty {
+                                    Text("No friends available")
+                                        .foregroundColor(.secondary)
+                                        .padding()
+                                } else {
+                                    ForEach(friends.filter { $0.id != appState.currentUser?.id }) { friend in
+                                        FriendCard(
+                                            friend: friend,
+                                            isSelected: selectedFriend?.id == friend.id
+                                        ) {
+                                            selectedFriend = friend
+                                        }
                                     }
                                 }
                             }
@@ -115,11 +126,50 @@ struct TransferPointsView: View {
         } message: {
             Text("Successfully sent \(pointsToSend) points to \(selectedFriend?.name ?? "")")
         }
+        .onAppear {
+            Task {
+                await loadFriends()
+            }
+        }
     }
     
     private func sendPoints() {
-        // Simulate sending points
-        showingSuccess = true
+        guard let friend = selectedFriend,
+              let points = Int(pointsToSend),
+              let currentUser = appState.currentUser else { return }
+        
+        Task {
+            let success = await supabaseService.transferPoints(
+                from: currentUser.id,
+                to: friend.id,
+                amount: points,
+                description: "Points sent to \(friend.name)"
+            )
+            
+            if success {
+                // Update local user points
+                let newPoints = currentUser.points - points
+                await supabaseService.updateUserPoints(currentUser.id, newPoints: newPoints)
+                
+                // Update app state
+                await MainActor.run {
+                    appState.currentUser?.points = newPoints
+                    showingSuccess = true
+                }
+            }
+        }
+    }
+    
+    private func loadFriends() async {
+        // For now, we'll use sample data - replace with actual Supabase call
+        let sampleFriends = [
+            User(id: "user2", name: "Jane Smith", email: "jane@example.com", profileImage: "profile2", communityId: "nyc", points: 980, friends: ["user1", "user3"], joinDate: Date(), authUserId: nil),
+            User(id: "user3", name: "Mike Johnson", email: "mike@example.com", profileImage: "profile3", communityId: "nyc", points: 1420, friends: ["user1", "user2"], joinDate: Date(), authUserId: nil)
+        ]
+        
+        await MainActor.run {
+            self.friends = sampleFriends
+        }
     }
 }
 
@@ -171,14 +221,24 @@ struct FriendCard: View {
 }
 
 struct FriendsListView: View {
-    @EnvironmentObject var dataStore: DataStore
+    @StateObject private var supabaseService = SupabaseService.shared
     @Environment(\.dismiss) private var dismiss
+    @State private var friends: [User] = []
     
     var body: some View {
         NavigationView {
             List {
                 Section("Friends") {
-                    ForEach(dataStore.sampleUsers) { user in
+                    if supabaseService.isLoading {
+                        HStack {
+                            ProgressView()
+                            Text("Loading friends...")
+                        }
+                    } else if friends.isEmpty {
+                        Text("No friends yet")
+                            .foregroundColor(.secondary)
+                    } else {
+                        ForEach(friends) { user in
                         HStack {
                             Circle()
                                 .fill(Color.brown.opacity(0.3))
@@ -237,6 +297,23 @@ struct FriendsListView: View {
                     }
                 }
             }
+            .onAppear {
+                Task {
+                    await loadFriends()
+                }
+            }
+        }
+    }
+    
+    private func loadFriends() async {
+        // For now, we'll use sample data - replace with actual Supabase call
+        let sampleFriends = [
+            User(id: "user2", name: "Jane Smith", email: "jane@example.com", profileImage: "profile2", communityId: "nyc", points: 980, friends: ["user1", "user3"], joinDate: Date(), authUserId: nil),
+            User(id: "user3", name: "Mike Johnson", email: "mike@example.com", profileImage: "profile3", communityId: "nyc", points: 1420, friends: ["user1", "user2"], joinDate: Date(), authUserId: nil)
+        ]
+        
+        await MainActor.run {
+            self.friends = sampleFriends
         }
     }
 }
@@ -244,5 +321,4 @@ struct FriendsListView: View {
 #Preview {
     TransferPointsView()
         .environmentObject(AppState())
-        .environmentObject(DataStore.shared)
 }
