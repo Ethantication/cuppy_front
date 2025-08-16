@@ -2,7 +2,10 @@ import SwiftUI
 
 struct CupMeView: View {
     @EnvironmentObject var appState: AppState
-    @EnvironmentObject var dataStore: DataStore
+    @StateObject private var supabaseService = SupabaseService.shared
+    @State private var friends: [User] = []
+    @State private var transactions: [Transaction] = []
+    
     @State private var showingRedeemSheet = false
     @State private var showingTransferSheet = false
     @State private var showingFriendsList = false
@@ -34,9 +37,7 @@ struct CupMeView: View {
                     
                     // Action Buttons
                     HStack(spacing: 15) {
-                        Button(action: {
-                            showingRedeemSheet = true
-                        }) {
+                        Button(action: { showingRedeemSheet = true }) {
                             VStack(spacing: 8) {
                                 Image(systemName: "gift")
                                     .font(.title2)
@@ -50,9 +51,7 @@ struct CupMeView: View {
                             .cornerRadius(12)
                         }
                         
-                        Button(action: {
-                            showingTransferSheet = true
-                        }) {
+                        Button(action: { showingTransferSheet = true }) {
                             VStack(spacing: 8) {
                                 Image(systemName: "paperplane.fill")
                                     .font(.title2)
@@ -85,7 +84,7 @@ struct CupMeView: View {
                         .padding(.horizontal, 20)
                         
                         LazyVStack(spacing: 10) {
-                            ForEach(Array(dataStore.sampleUsers.sorted(by: { $0.points > $1.points }).enumerated()), id: \.element.id) { index, user in
+                            ForEach(Array(friends.sorted(by: { $0.points > $1.points }).enumerated()), id: \.element.id) { index, user in
                                 FriendLeaderboardRow(user: user, rank: index + 1, isCurrentUser: user.id == appState.currentUser?.id)
                             }
                         }
@@ -100,7 +99,7 @@ struct CupMeView: View {
                             .padding(.horizontal, 20)
                         
                         LazyVStack(spacing: 10) {
-                            ForEach(dataStore.sampleTransactions) { transaction in
+                            ForEach(transactions) { transaction in
                                 TransactionRow(transaction: transaction)
                             }
                         }
@@ -111,6 +110,11 @@ struct CupMeView: View {
             }
             .navigationTitle("Cup Me")
             .navigationBarTitleDisplayMode(.large)
+            .onAppear {
+                Task {
+                    await loadData()
+                }
+            }
         }
         .sheet(isPresented: $showingRedeemSheet) {
             RedeemPointsView()
@@ -122,8 +126,18 @@ struct CupMeView: View {
             FriendsListView()
         }
     }
+    
+    // MARK: - Data Loading
+    private func loadData() async {
+        guard let currentUser = appState.currentUser else { return }
+        
+        // Fetch friends and transactions from Supabase
+        friends = await supabaseService.fetchFriends(for: currentUser.id)
+        transactions = await supabaseService.fetchUserTransactions(currentUser.id)
+    }
 }
 
+// MARK: - Friend Row
 struct FriendLeaderboardRow: View {
     let user: User
     let rank: Int
@@ -176,7 +190,6 @@ struct FriendLeaderboardRow: View {
             
             Spacer()
             
-            // Trophy for top 3
             if rank <= 3 {
                 Image(systemName: "trophy.fill")
                     .foregroundColor(rankColor)
@@ -188,6 +201,7 @@ struct FriendLeaderboardRow: View {
     }
 }
 
+// MARK: - Transaction Row
 struct TransactionRow: View {
     let transaction: Transaction
     
@@ -247,5 +261,4 @@ struct TransactionRow: View {
 #Preview {
     CupMeView()
         .environmentObject(AppState())
-        .environmentObject(DataStore.shared)
 }
