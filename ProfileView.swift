@@ -2,11 +2,13 @@ import SwiftUI
 
 struct ProfileView: View {
     @EnvironmentObject var appState: AppState
-    @EnvironmentObject var dataStore: DataStore
+    @StateObject private var supabaseService = SupabaseService.shared
+    @State private var communities: [Community] = []
     @State private var showingEditProfile = false
     @State private var showingCommunityChange = false
     @State private var showingLogoutAlert = false
-    
+    @State private var selectedCommunity: Community?
+
     var body: some View {
         NavigationView {
             List {
@@ -23,7 +25,7 @@ struct ProfileView: View {
                         .foregroundColor(.brown)
                     }
                 }
-                
+
                 // Community Info
                 Section("Community") {
                     if let community = appState.selectedCommunity {
@@ -31,12 +33,12 @@ struct ProfileView: View {
                             HStack {
                                 Image(systemName: "location.fill")
                                     .foregroundColor(.brown)
-                                
+
                                 VStack(alignment: .leading, spacing: 4) {
                                     Text(community.name)
                                         .font(.headline)
                                         .fontWeight(.medium)
-                                    
+
                                     Text("\(community.city), \(community.country)")
                                         .font(.subheadline)
                                         .foregroundColor(.secondary)
@@ -44,31 +46,31 @@ struct ProfileView: View {
                             }
                         }
                         .padding(.vertical, 4)
-                        
+
                         Button("Change Community") {
                             showingCommunityChange = true
                         }
                         .foregroundColor(.brown)
                     }
                 }
-                
+
                 // Statistics
                 if let user = appState.currentUser {
                     Section("Your Stats") {
                         StatRow(icon: "star.fill", title: "Total Points", value: "\(user.points)")
                         StatRow(icon: "person.2.fill", title: "Friends", value: "\(user.friends.count)")
                         StatRow(icon: "calendar", title: "Member Since", value: user.joinDate, style: .date)
-                        StatRow(icon: "cup.and.saucer.fill", title: "Favorite Shop", value: "Blue Bottle Coffee")
+                        StatRow(icon: "cup.and.saucer.fill", title: "Favorite Shop", value: "—")
                     }
                 }
-                
+
                 // Settings
                 Section("Settings") {
                     SettingsRow(icon: "bell.fill", title: "Notifications", hasDisclosure: true)
                     SettingsRow(icon: "questionmark.circle.fill", title: "Help & Support", hasDisclosure: true)
                     SettingsRow(icon: "doc.text.fill", title: "Terms & Privacy", hasDisclosure: true)
                 }
-                
+
                 // Account Actions
                 Section {
                     if appState.currentUser != nil {
@@ -86,7 +88,7 @@ struct ProfileView: View {
             EditProfileView()
         }
         .sheet(isPresented: $showingCommunityChange) {
-            CommunityChangeView()
+            CommunityChangeView(communities: communities, selectedCommunity: $selectedCommunity)
         }
         .alert("Sign Out", isPresented: $showingLogoutAlert) {
             Button("Cancel", role: .cancel) { }
@@ -96,197 +98,31 @@ struct ProfileView: View {
         } message: {
             Text("Are you sure you want to sign out?")
         }
-    }
-}
-
-struct ProfileHeaderView: View {
-    let user: User
-    let onEdit: () -> Void
-    
-    var body: some View {
-        HStack(spacing: 15) {
-            // Profile Image
-            Circle()
-                .fill(Color.brown.opacity(0.3))
-                .frame(width: 80, height: 80)
-                .overlay(
-                    Text(String(user.name.prefix(1)))
-                        .font(.largeTitle)
-                        .fontWeight(.bold)
-                        .foregroundColor(.brown)
-                )
-            
-            VStack(alignment: .leading, spacing: 8) {
-                Text(user.name)
-                    .font(.title2)
-                    .fontWeight(.bold)
-                
-                Text(user.email)
-                    .font(.subheadline)
-                    .foregroundColor(.secondary)
-                
-                HStack {
-                    Image(systemName: "star.fill")
-                        .foregroundColor(.brown)
-                        .font(.caption)
-                    
-                    Text("\(user.points) points")
-                        .font(.subheadline)
-                        .fontWeight(.medium)
-                        .foregroundColor(.brown)
-                }
-            }
-            
-            Spacer()
-            
-            Button("Edit") {
-                onEdit()
-            }
-            .font(.subheadline)
-            .foregroundColor(.brown)
-        }
-        .padding(.vertical, 8)
-    }
-}
-
-struct StatRow: View {
-    let icon: String
-    let title: String
-    let value: String
-    let style: Text.DateStyle?
-    
-    init(icon: String, title: String, value: String) {
-        self.icon = icon
-        self.title = title
-        self.value = value
-        self.style = nil
-    }
-    
-    init(icon: String, title: String, value: Date, style: Text.DateStyle) {
-        self.icon = icon
-        self.title = title
-        self.value = ""
-        self.style = style
-    }
-    
-    var body: some View {
-        HStack {
-            Image(systemName: icon)
-                .foregroundColor(.brown)
-                .font(.title3)
-                .frame(width: 24)
-            
-            Text(title)
-                .font(.subheadline)
-            
-            Spacer()
-            
-            if let style = style {
-                Text(Date(), style: style)
-                    .font(.subheadline)
-                    .foregroundColor(.secondary)
-            } else {
-                Text(value)
-                    .font(.subheadline)
-                    .foregroundColor(.secondary)
-            }
-        }
-        .padding(.vertical, 2)
-    }
-}
-
-struct SettingsRow: View {
-    let icon: String
-    let title: String
-    let hasDisclosure: Bool
-    
-    var body: some View {
-        HStack {
-            Image(systemName: icon)
-                .foregroundColor(.brown)
-                .font(.title3)
-                .frame(width: 24)
-            
-            Text(title)
-                .font(.subheadline)
-            
-            Spacer()
-            
-            if hasDisclosure {
-                Image(systemName: "chevron.right")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-            }
-        }
-        .padding(.vertical, 2)
-    }
-}
-
-struct EditProfileView: View {
-    @EnvironmentObject var appState: AppState
-    @Environment(\.dismiss) private var dismiss
-    @State private var name: String = ""
-    @State private var email: String = ""
-    
-    var body: some View {
-        NavigationView {
-            Form {
-                Section("Profile Information") {
-                    TextField("Name", text: $name)
-                    TextField("Email", text: $email)
-                        .keyboardType(.emailAddress)
-                        .autocapitalization(.none)
-                }
-                
-                Section("Profile Picture") {
-                    Button("Change Photo") {
-                        // Photo picker functionality
-                    }
-                    .foregroundColor(.brown)
-                }
-            }
-            .navigationTitle("Edit Profile")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
-                    Button("Cancel") {
-                        dismiss()
-                    }
-                }
-                
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Save") {
-                        // Save profile changes
-                        dismiss()
-                    }
-                    .fontWeight(.semibold)
-                }
-            }
-        }
         .onAppear {
-            if let user = appState.currentUser {
-                name = user.name
-                email = user.email
+            Task {
+                communities = await supabaseService.fetchCommunities()
+                selectedCommunity = appState.selectedCommunity
             }
         }
     }
 }
 
+// Modified CommunityChangeView to use Supabase communities
 struct CommunityChangeView: View {
+    let communities: [Community]
+    @Binding var selectedCommunity: Community?
     @EnvironmentObject var appState: AppState
-    @EnvironmentObject var dataStore: DataStore
     @Environment(\.dismiss) private var dismiss
-    @State private var selectedCommunity: Community?
-    
+
     var body: some View {
         NavigationView {
             VStack(spacing: 20) {
                 Text("Select a new community")
                     .font(.headline)
                     .padding(.top, 20)
-                
+
                 LazyVStack(spacing: 15) {
-                    ForEach(dataStore.communities) { community in
+                    ForEach(communities) { community in
                         CommunityCard(
                             community: community,
                             isSelected: selectedCommunity?.id == community.id
@@ -296,9 +132,9 @@ struct CommunityChangeView: View {
                     }
                 }
                 .padding(.horizontal, 20)
-                
+
                 Spacer()
-                
+
                 Button("Switch Community") {
                     if let community = selectedCommunity {
                         appState.selectCommunity(community)
@@ -326,13 +162,9 @@ struct CommunityChangeView: View {
             }
         }
         .onAppear {
-            selectedCommunity = appState.selectedCommunity
+            if selectedCommunity == nil {
+                selectedCommunity = appState.selectedCommunity
+            }
         }
     }
-}
-
-#Preview {
-    ProfileView()
-        .environmentObject(AppState())
-        .environmentObject(DataStore.shared)
 }
