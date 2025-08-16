@@ -2,12 +2,12 @@ import SwiftUI
 
 struct DashboardView: View {
     @EnvironmentObject var appState: AppState
-    @EnvironmentObject var dataStore: DataStore
+    @StateObject private var supabaseManager = SupabaseManager.shared
     @State private var showingCoffeeShopDetail = false
     @State private var selectedCoffeeShop: CoffeeShop?
     
     var coffeeShopsInCommunity: [CoffeeShop] {
-        dataStore.coffeeShops.filter { $0.communityId == appState.selectedCommunity?.id }
+        supabaseManager.coffeeShops.filter { $0.communityId == appState.selectedCommunity?.id }
     }
     
     var body: some View {
@@ -38,19 +38,54 @@ struct DashboardView: View {
                     .padding(.top, 10)
                     
                     // Coffee Shops
-                    ForEach(coffeeShopsInCommunity) { coffeeShop in
-                        CoffeeShopCard(coffeeShop: coffeeShop) {
-                            selectedCoffeeShop = coffeeShop
-                            showingCoffeeShopDetail = true
+                    if supabaseManager.isLoading {
+                        LoadingView(message: "Loading coffee shops...")
+                            .padding(.horizontal, 20)
+                    } else if let errorMessage = supabaseManager.errorMessage {
+                        ErrorView(message: errorMessage) {
+                            if let communityId = appState.selectedCommunity?.id {
+                                Task {
+                                    do {
+                                        try await supabaseManager.fetchCoffeeShops(for: communityId)
+                                    } catch {
+                                        print("Failed to retry loading coffee shops: \(error)")
+                                    }
+                                }
+                            }
                         }
                         .padding(.horizontal, 20)
+                    } else {
+                        ForEach(coffeeShopsInCommunity) { coffeeShop in
+                            CoffeeShopCard(coffeeShop: coffeeShop) {
+                                selectedCoffeeShop = coffeeShop
+                                showingCoffeeShopDetail = true
+                            }
+                            .padding(.horizontal, 20)
+                        }
                     }
                 }
                 .padding(.bottom, 20)
             }
             .navigationBarTitleDisplayMode(.inline)
             .refreshable {
-                // Simulate refresh
+                // Refresh coffee shops data
+                if let communityId = appState.selectedCommunity?.id {
+                    do {
+                        try await supabaseManager.fetchCoffeeShops(for: communityId)
+                    } catch {
+                        print("Failed to refresh coffee shops: \(error)")
+                    }
+                }
+            }
+            .task {
+                // Load coffee shops when view appears
+                if let communityId = appState.selectedCommunity?.id {
+                    do {
+                        try await supabaseManager.fetchCoffeeShops(for: communityId)
+                    } catch {
+                        print("Failed to load coffee shops: \(error)")
+                    }
+                }
             }
         }
         .sheet(isPresented: $showingCoffeeShopDetail) {

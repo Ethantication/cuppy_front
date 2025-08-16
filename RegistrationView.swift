@@ -158,49 +158,24 @@ struct RegistrationView: View {
     }
     
     private func registerWithGoogle() {
-        // Simulate Google registration
-        let user = User(
-            id: UUID().uuidString,
-            name: "Google User",
-            email: "google@example.com",
-            profileImage: nil,
-            communityId: appState.selectedCommunity?.id ?? "",
-            points: 0,
-            friends: [],
-            joinDate: Date()
-        )
-        appState.registerUser(user)
+        // TODO: Implement Google OAuth with Supabase
+        print("Google registration not yet implemented")
     }
     
     private func registerWithApple() {
-        // Simulate Apple registration
-        let user = User(
-            id: UUID().uuidString,
-            name: "Apple User",
-            email: "apple@example.com",
-            profileImage: nil,
-            communityId: appState.selectedCommunity?.id ?? "",
-            points: 0,
-            friends: [],
-            joinDate: Date()
-        )
-        appState.registerUser(user)
+        // TODO: Implement Apple Sign In with Supabase
+        print("Apple registration not yet implemented")
     }
     
     private func registerWithEmail() {
         guard isFormValid else { return }
         
-        let user = User(
-            id: UUID().uuidString,
-            name: name,
-            email: email,
-            profileImage: nil,
-            communityId: appState.selectedCommunity?.id ?? "",
-            points: 0,
-            friends: [],
-            joinDate: Date()
-        )
-        appState.registerUser(user)
+        Task {
+            await appState.registerUser(name: name, email: email, password: password)
+            if appState.currentUser != nil {
+                dismiss()
+            }
+        }
     }
 }
 

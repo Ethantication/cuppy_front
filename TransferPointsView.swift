@@ -2,7 +2,7 @@ import SwiftUI
 
 struct TransferPointsView: View {
     @EnvironmentObject var appState: AppState
-    @EnvironmentObject var dataStore: DataStore
+    @StateObject private var supabaseManager = SupabaseManager.shared
     @Environment(\.dismiss) private var dismiss
     @State private var selectedFriend: User?
     @State private var pointsToSend = ""
@@ -50,7 +50,7 @@ struct TransferPointsView: View {
                                 .fontWeight(.semibold)
                             
                             LazyVStack(spacing: 10) {
-                                ForEach(dataStore.sampleUsers.filter { $0.id != appState.currentUser?.id }) { friend in
+                                ForEach(supabaseManager.friends.filter { $0.id != appState.currentUser?.id }) { friend in
                                     FriendCard(
                                         friend: friend,
                                         isSelected: selectedFriend?.id == friend.id
@@ -115,11 +115,32 @@ struct TransferPointsView: View {
         } message: {
             Text("Successfully sent \(pointsToSend) points to \(selectedFriend?.name ?? "")")
         }
+        .task {
+            do {
+                try await supabaseManager.fetchFriends()
+            } catch {
+                print("Failed to load friends: \(error)")
+            }
+        }
     }
     
     private func sendPoints() {
-        // Simulate sending points
-        showingSuccess = true
+        guard let friend = selectedFriend,
+              let points = Int(pointsToSend),
+              points > 0 else { return }
+        
+        Task {
+            do {
+                try await supabaseManager.transferPoints(
+                    to: friend.id,
+                    amount: points,
+                    description: "Sent to \(friend.name)"
+                )
+                showingSuccess = true
+            } catch {
+                print("Failed to transfer points: \(error)")
+            }
+        }
     }
 }
 

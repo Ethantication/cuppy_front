@@ -151,7 +151,7 @@ struct CoffeeShopDetailView: View {
                                     Button(action: {
                                         selectedCategory = category
                                     }) {
-                                        Text(category.rawValue)
+                                        Text(category.displayName)
                                             .font(.subheadline)
                                             .fontWeight(.medium)
                                             .foregroundColor(selectedCategory == category ? .white : .brown)
@@ -200,7 +200,7 @@ struct BeverageRow: View {
                     .font(.headline)
                     .fontWeight(.medium)
                 
-                Text(beverage.description)
+                Text(beverage.description ?? "")
                     .font(.subheadline)
                     .foregroundColor(.secondary)
             }

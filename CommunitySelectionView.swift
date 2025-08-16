@@ -2,7 +2,7 @@ import SwiftUI
 
 struct CommunitySelectionView: View {
     @EnvironmentObject var appState: AppState
-    @EnvironmentObject var dataStore: DataStore
+    @StateObject private var supabaseManager = SupabaseManager.shared
     @State private var selectedCommunity: Community?
     
     var body: some View {
@@ -29,16 +29,30 @@ struct CommunitySelectionView: View {
                 Spacer()
                 
                 // Community List
-                LazyVStack(spacing: 15) {
-                    ForEach(dataStore.communities) { community in
-                        CommunityCard(
-                            community: community,
-                            isSelected: selectedCommunity?.id == community.id
-                        ) {
-                            selectedCommunity = community
+                                        if supabaseManager.isLoading {
+                            LoadingView(message: "Loading communities...")
+                        } else if let errorMessage = supabaseManager.errorMessage {
+                            ErrorView(message: errorMessage) {
+                                Task {
+                                    do {
+                                        try await supabaseManager.fetchCommunities()
+                                    } catch {
+                                        print("Failed to retry loading communities: \(error)")
+                                    }
+                                }
+                            }
+                        } else {
+                            LazyVStack(spacing: 15) {
+                                ForEach(supabaseManager.communities) { community in
+                                    CommunityCard(
+                                        community: community,
+                                        isSelected: selectedCommunity?.id == community.id
+                                    ) {
+                                        selectedCommunity = community
+                                    }
+                                }
+                            }
                         }
-                    }
-                }
                 .padding(.horizontal, 20)
                 
                 Spacer()
@@ -68,6 +82,13 @@ struct CommunitySelectionView: View {
                 .padding(.bottom, 50)
             }
             .background(Color(.systemGroupedBackground))
+            .task {
+                do {
+                    try await supabaseManager.fetchCommunities()
+                } catch {
+                    print("Failed to load communities: \(error)")
+                }
+            }
         }
     }
 }
