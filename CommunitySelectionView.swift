@@ -2,13 +2,15 @@ import SwiftUI
 
 struct CommunitySelectionView: View {
     @EnvironmentObject var appState: AppState
-    @StateObject private var supabaseService = SupabaseService.shared
     @State private var selectedCommunity: Community?
     @State private var communities: [Community] = []
-    
+    @State private var isLoading = false
+    @State private var errorMessage: String?
+
     var body: some View {
         NavigationView {
             VStack(spacing: 20) {
+                
                 // Header
                 VStack(spacing: 10) {
                     Image(systemName: "cup.and.saucer.fill")
@@ -31,9 +33,13 @@ struct CommunitySelectionView: View {
                 
                 // Community List
                 LazyVStack(spacing: 15) {
-                    if supabaseService.isLoading {
+                    if isLoading {
                         ProgressView("Loading communities...")
                             .frame(maxWidth: .infinity)
+                            .padding()
+                    } else if let errorMessage {
+                        Text(errorMessage)
+                            .foregroundColor(.red)
                             .padding()
                     } else if communities.isEmpty {
                         Text("No communities available")
@@ -79,20 +85,27 @@ struct CommunitySelectionView: View {
                 .padding(.bottom, 50)
             }
             .background(Color(.systemGroupedBackground))
-            .onAppear {
-                Task {
-                    await loadCommunities()
-                }
+            .task {
+                await loadCommunities()
             }
         }
     }
     
-    // MARK: - Data Loading
+    // MARK: - Load communities from Supabase
     private func loadCommunities() async {
-        let loadedCommunities = await supabaseService.fetchCommunities()
-        await MainActor.run {
-            self.communities = loadedCommunities
+        isLoading = true
+        errorMessage = nil
+        do {
+            let loadedCommunities = await SupabaseService.shared.fetchCommunities()
+            await MainActor.run {
+                self.communities = loadedCommunities
+            }
+        } catch {
+            await MainActor.run {
+                self.errorMessage = error.localizedDescription
+            }
         }
+        await MainActor.run { isLoading = false }
     }
 }
 
