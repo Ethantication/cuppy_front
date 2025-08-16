@@ -1,4 +1,4 @@
--- Supabase Database Setup for Coffee Community App
+-- Supabase Database Setup for Cuppy_backend App
 -- This script creates all tables, relationships, indexes, and RLS policies
 
 -- Enable necessary extensions

@@ -1,4 +1,4 @@
--- Complete Haifa Coffee Community Database Setup
+-- Complete Haifa Coffee Community Database Setup for Cuppy_backend
 -- Run this entire script in your Supabase SQL Editor
 
 -- Enable necessary extensions

@@ -73,7 +73,7 @@ After setup, your app will show:
 - **Culturally appropriate** menu items and descriptions
 - **Student-friendly** options at university locations
 
-Your Coffee Community App is now ready with authentic Haifa coffee shop data! 🇮🇱☕
+Your Cuppy_backend app is now ready with authentic Haifa coffee shop data! 🇮🇱☕
 
 ## 📱 Next Steps
 

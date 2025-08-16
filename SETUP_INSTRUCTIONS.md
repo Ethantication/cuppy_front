@@ -1,4 +1,4 @@
-# Coffee Community App - Setup Instructions
+# Cuppy_backend - Setup Instructions
 
 Your app has been successfully updated to use Supabase! Here's what you need to do to complete the setup:
 
@@ -125,4 +125,4 @@ All tables include proper indexes, constraints, and Row Level Security policies.
 - RLS policies ensure users can only access their community's data
 - All point transfers are atomic and validated server-side
 
-Your Coffee Community App is now a full-featured, production-ready application with real-time data, authentication, and social features! 🎉☕
+Your Cuppy_backend app is now a full-featured, production-ready application with real-time data, authentication, and social features! 🎉☕

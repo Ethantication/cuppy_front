@@ -1,4 +1,4 @@
--- Real Data for Coffee Community App - Haifa
+-- Real Data for Cuppy_backend App - Haifa
 -- This script inserts the actual data for Haifa community and coffee shops
 
 -- Clear existing data first (optional)

@@ -1,4 +1,4 @@
--- Sample Data for Coffee Community App
+-- Sample Data for Cuppy_backend App
 -- This script inserts test data to populate the database
 
 -- =====================================================

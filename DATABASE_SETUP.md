@@ -1,8 +1,8 @@
-# Coffee Community App - Database Setup Guide
+# Cuppy_backend - Database Setup Guide
 
 ## Overview
 
-This document describes the data model and setup process for the Coffee Community App's Supabase database. The app is a location-based coffee shop loyalty platform that allows users to earn and redeem points, transfer points to friends, and discover coffee shops in their community.
+This document describes the data model and setup process for the Cuppy_backend app's Supabase database. The app is a location-based coffee shop loyalty platform that allows users to earn and redeem points, transfer points to friends, and discover coffee shops in their community.
 
 ## Data Model
 
@@ -289,4 +289,4 @@ SELECT * FROM pg_policies WHERE tablename = 'users';
 SELECT * FROM user_transaction_history WHERE user_id = 'user-id' LIMIT 10;
 ```
 
-This database setup provides a robust foundation for the Coffee Community App with proper security, performance optimization, and scalability considerations.
+This database setup provides a robust foundation for the Cuppy_backend app with proper security, performance optimization, and scalability considerations.
