@@ -8,7 +8,8 @@ struct RegistrationView: View {
     @State private var email = ""
     @State private var password = ""
     @State private var confirmPassword = ""
-    
+    @StateObject private var supabaseService = SupabaseService.shared
+
     var body: some View {
         NavigationView {
             VStack(spacing: 30) {
@@ -17,11 +18,11 @@ struct RegistrationView: View {
                     Image(systemName: "person.crop.circle.badge.plus")
                         .font(.system(size: 60))
                         .foregroundColor(.brown)
-                    
+
                     Text("Join the Community")
                         .font(.title)
                         .fontWeight(.bold)
-                    
+
                     Text("Create your account to start earning points and connecting with fellow coffee lovers!")
                         .font(.subheadline)
                         .foregroundColor(.secondary)
@@ -29,71 +30,24 @@ struct RegistrationView: View {
                         .padding(.horizontal, 20)
                 }
                 .padding(.top, 30)
-                
+
                 if !showEmailForm {
                     // Social Login Options
                     VStack(spacing: 15) {
-                        // Google Sign Up
-                        Button(action: {
-                            registerWithGoogle()
-                        }) {
-                            HStack {
-                                Image(systemName: "globe")
-                                    .font(.title2)
-                                Text("Continue with Google")
-                                    .font(.headline)
-                                    .fontWeight(.medium)
-                            }
-                            .foregroundColor(.white)
-                            .frame(maxWidth: .infinity, minHeight: 50)
-                            .background(Color.red)
-                            .cornerRadius(12)
-                        }
-                        
-                        // Apple Sign Up
-                        Button(action: {
-                            registerWithApple()
-                        }) {
-                            HStack {
-                                Image(systemName: "applelogo")
-                                    .font(.title2)
-                                Text("Continue with Apple")
-                                    .font(.headline)
-                                    .fontWeight(.medium)
-                            }
-                            .foregroundColor(.white)
-                            .frame(maxWidth: .infinity, minHeight: 50)
-                            .background(Color.black)
-                            .cornerRadius(12)
-                        }
-                        
-                        // Email Sign Up
-                        Button(action: {
-                            showEmailForm = true
-                        }) {
-                            HStack {
-                                Image(systemName: "envelope")
-                                    .font(.title2)
-                                Text("Continue with Email")
-                                    .font(.headline)
-                                    .fontWeight(.medium)
-                            }
-                            .foregroundColor(.white)
-                            .frame(maxWidth: .infinity, minHeight: 50)
-                            .background(Color.brown)
-                            .cornerRadius(12)
-                        }
+                        Button("Continue with Google") { registerWithGoogle() }
+                            .socialButton(color: .red, icon: "globe")
+                        Button("Continue with Apple") { registerWithApple() }
+                            .socialButton(color: .black, icon: "applelogo")
+                        Button("Continue with Email") { showEmailForm = true }
+                            .socialButton(color: .brown, icon: "envelope")
                     }
                     .padding(.horizontal, 30)
-                    
+
                     Spacer()
-                    
-                    // Skip Option
-                    Button("Skip for now") {
-                        dismiss()
-                    }
-                    .foregroundColor(.secondary)
-                    .padding(.bottom, 30)
+
+                    Button("Skip for now") { dismiss() }
+                        .foregroundColor(.secondary)
+                        .padding(.bottom, 30)
                     
                 } else {
                     // Email Registration Form
@@ -101,23 +55,21 @@ struct RegistrationView: View {
                         VStack(spacing: 15) {
                             TextField("Full Name", text: $name)
                                 .textFieldStyle(RoundedBorderTextFieldStyle())
-                            
+
                             TextField("Email", text: $email)
                                 .textFieldStyle(RoundedBorderTextFieldStyle())
                                 .keyboardType(.emailAddress)
                                 .autocapitalization(.none)
-                            
+
                             SecureField("Password", text: $password)
                                 .textFieldStyle(RoundedBorderTextFieldStyle())
-                            
+
                             SecureField("Confirm Password", text: $confirmPassword)
                                 .textFieldStyle(RoundedBorderTextFieldStyle())
                         }
                         .padding(.horizontal, 30)
-                        
-                        Button(action: {
-                            registerWithEmail()
-                        }) {
+
+                        Button(action: { Task { await registerWithEmail() } }) {
                             Text("Create Account")
                                 .font(.headline)
                                 .fontWeight(.semibold)
@@ -128,79 +80,68 @@ struct RegistrationView: View {
                         }
                         .disabled(!isFormValid)
                         .padding(.horizontal, 30)
-                        
-                        Button("Back to options") {
-                            showEmailForm = false
-                        }
-                        .foregroundColor(.brown)
+
+                        Button("Back to options") { showEmailForm = false }
+                            .foregroundColor(.brown)
                     }
-                    
+
                     Spacer()
                 }
             }
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Close") {
-                        dismiss()
-                    }
+                    Button("Close") { dismiss() }
                 }
             }
         }
     }
-    
+
     private var isFormValid: Bool {
-        !name.isEmpty && 
-        !email.isEmpty && 
-        !password.isEmpty && 
+        !name.isEmpty &&
+        !email.isEmpty &&
+        !password.isEmpty &&
         password == confirmPassword &&
         password.count >= 6
     }
-    
-    private func registerWithGoogle() {
-        // Simulate Google registration
-        let user = User(
-            id: UUID().uuidString,
-            name: "Google User",
-            email: "google@example.com",
-            profileImage: nil,
-            communityId: appState.selectedCommunity?.id ?? "",
-            points: 0,
-            friends: [],
-            joinDate: Date()
-        )
-        appState.registerUser(user)
-    }
-    
-    private func registerWithApple() {
-        // Simulate Apple registration
-        let user = User(
-            id: UUID().uuidString,
-            name: "Apple User",
-            email: "apple@example.com",
-            profileImage: nil,
-            communityId: appState.selectedCommunity?.id ?? "",
-            points: 0,
-            friends: [],
-            joinDate: Date()
-        )
-        appState.registerUser(user)
-    }
-    
-    private func registerWithEmail() {
+
+    // MARK: - Supabase Registration
+    private func registerWithEmail() async {
         guard isFormValid else { return }
-        
-        let user = User(
-            id: UUID().uuidString,
-            name: name,
-            email: email,
-            profileImage: nil,
-            communityId: appState.selectedCommunity?.id ?? "",
-            points: 0,
-            friends: [],
-            joinDate: Date()
-        )
-        appState.registerUser(user)
+        if let communityId = appState.selectedCommunity?.id {
+            if let user = try? await supabaseService.registerUser(
+                name: name,
+                email: email,
+                password: password,
+                communityId: communityId
+            ) {
+                appState.registerUser(user)
+                dismiss()
+            }
+        }
+    }
+
+    private func registerWithGoogle() {
+        // TODO: Implement Supabase Google Auth
+    }
+
+    private func registerWithApple() {
+        // TODO: Implement Supabase Apple Auth
+    }
+}
+
+// MARK: - Social Button Modifier
+extension View {
+    func socialButton(color: Color, icon: String) -> some View {
+        HStack {
+            Image(systemName: icon)
+                .font(.title2)
+            self
+        }
+        .foregroundColor(.white)
+        .frame(maxWidth: .infinity, minHeight: 50)
+        .background(color)
+        .cornerRadius(12)
     }
 }
 
