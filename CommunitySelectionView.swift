@@ -2,8 +2,9 @@ import SwiftUI
 
 struct CommunitySelectionView: View {
     @EnvironmentObject var appState: AppState
-    @EnvironmentObject var dataStore: DataStore
+    @StateObject private var supabaseService = SupabaseService.shared
     @State private var selectedCommunity: Community?
+    @State private var communities: [Community] = []
     
     var body: some View {
         NavigationView {
@@ -30,12 +31,22 @@ struct CommunitySelectionView: View {
                 
                 // Community List
                 LazyVStack(spacing: 15) {
-                    ForEach(dataStore.communities) { community in
-                        CommunityCard(
-                            community: community,
-                            isSelected: selectedCommunity?.id == community.id
-                        ) {
-                            selectedCommunity = community
+                    if supabaseService.isLoading {
+                        ProgressView("Loading communities...")
+                            .frame(maxWidth: .infinity)
+                            .padding()
+                    } else if communities.isEmpty {
+                        Text("No communities available")
+                            .foregroundColor(.secondary)
+                            .padding()
+                    } else {
+                        ForEach(communities) { community in
+                            CommunityCard(
+                                community: community,
+                                isSelected: selectedCommunity?.id == community.id
+                            ) {
+                                selectedCommunity = community
+                            }
                         }
                     }
                 }
@@ -68,6 +79,19 @@ struct CommunitySelectionView: View {
                 .padding(.bottom, 50)
             }
             .background(Color(.systemGroupedBackground))
+            .onAppear {
+                Task {
+                    await loadCommunities()
+                }
+            }
+        }
+    }
+    
+    // MARK: - Data Loading
+    private func loadCommunities() async {
+        let loadedCommunities = await supabaseService.fetchCommunities()
+        await MainActor.run {
+            self.communities = loadedCommunities
         }
     }
 }
@@ -113,5 +137,4 @@ struct CommunityCard: View {
 #Preview {
     CommunitySelectionView()
         .environmentObject(AppState())
-        .environmentObject(DataStore.shared)
 }

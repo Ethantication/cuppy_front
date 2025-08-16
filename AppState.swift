@@ -8,6 +8,8 @@ class AppState: ObservableObject {
     @Published var showRegistrationPopup = false
     @Published var selectedTab = 0
     
+    private let supabaseService = SupabaseService.shared
+    
     init() {
         // Check if user has selected community before
         if let communityData = UserDefaults.standard.data(forKey: "selectedCommunity"),
@@ -41,9 +43,14 @@ class AppState: ObservableObject {
     func registerUser(_ user: User) {
         self.currentUser = user
         
-        // Save to UserDefaults
+        // Save to UserDefaults for offline access
         if let encoded = try? JSONEncoder().encode(user) {
             UserDefaults.standard.set(encoded, forKey: "currentUser")
+        }
+        
+        // Create user in Supabase
+        Task {
+            await supabaseService.createUser(user)
         }
         
         showRegistrationPopup = false
